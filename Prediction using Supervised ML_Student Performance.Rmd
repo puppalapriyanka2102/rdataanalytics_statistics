@@ -1,0 +1,232 @@
+---
+title: "Prediction using Supervised ML"
+author: "Priyanka Puppala"
+date: "Last Updated: `r format(Sys.time(), '%d, %B, %Y at %H:%M')`"
+output: rmdformats::readthedown
+--- 
+### Graduate Rotational Internship Program The Sparks Foundation
+### Data Science & Business Analytics Tasks
+### Prediction using Supervised ML
+
+# Introduction
+* Linear Regression with R Programming (R-studio)
+
+* In this project the we can see how a Simple Linear Regression can be used for 
+prediction for the percentage of an student based on the no. of study hours.
+
+* It is implementing using R programming -rmarkdown report.
+
+* We will start with simple linear regression involving two variables.
+
+# Problem Statement
+
+* In this we need to predict the percentage of marks based on the number of 
+hours they study.
+* Here we are using  two variables Hours and  Scores for the regression. 
+
+# Data Collection
+
+* Collecting the student data from url
+* Reading the data into csv file 
+
+```{r,,warning=FALSE, message=FALSE }
+library(readr)
+library(tidyverse)
+library(tidymodels)
+library(ggplot2)
+student_scoresURL <- "https://raw.githubusercontent.com/AdiPersonalWorks/Random/master/student_scores%20-%20student_scores.csv"
+
+student_scores <- read.csv(file = student_scoresURL, 
+                  header = TRUE,
+                     sep = ",",
+                     stringsAsFactors = FALSE)
+student_scores
+```
+* writing/saving the student_scores file into local directory
+```{r , warning=FALSE, message=FALSE}
+
+write.table(student_scores, file = "student_scores.csv ",
+            row.names = FALSE,
+            col.names = TRUE,
+            sep = "\t",
+            quote = FALSE)
+
+
+
+```
+
+* Checking Basic Information about the student_scores data
+* Checking summary and structure of the data 
+```{r , warning=FALSE, message=FALSE}
+head(student_scores)
+dim(student_scores)
+
+str(student_scores) 
+
+summary(student_scores) 
+```
+# Data Preparation
+```{r , warning=FALSE, message=FALSE}
+library(caTools)
+set <- sample(2, nrow(student_scores), 
+              replace = TRUE, 
+              prob = c(0.7, 0.3))
+train <- student_scores[set==1,]
+train
+
+test <- student_scores[set==2,]
+test
+```
+## Data Cleaning
+
+* Checking for Missing Values/NA/NAN
+```{r , warning=FALSE, message=FALSE}
+library(DataExplorer)
+sum(is.na(train))
+sum(is.na(test))
+plot_missing(train)
+```
+# Exploratory Data Analysis (EDA)
+* describe - can computes the statistics of all numerical variables 
+```{r, warning=FALSE, message=FALSE}
+library(Hmisc)
+describe(train)
+describe(test)
+
+```
+* Two continuous variables
+```{r, fig.width=8, fig.height=5}
+library(ggplot2)
+
+q <- ggplot(data = train, aes(x = Hours, y = Scores))+
+  geom_line(colour = "skyblue") +
+  geom_point(colour = "blue")
+q
+
+ggplot(data=train,aes(x=Hours,y=Scores)) + 
+  geom_bar(stat ='identity',aes(fill=Scores))+
+  coord_flip() + 
+  theme_grey() + 
+  scale_fill_gradient(name="Score Level")+
+  labs(title = 'Scores according to hours',
+       y='Score per hour',x='Hours of study')+ 
+  geom_hline(yintercept = mean(student_scores$Scores),size = 1, color = 'red')
+
+
+```
+```{r, fig.width=8, fig.height=5, message=FALSE, warning=FALSE}
+library(plotly)
+plot_ly(train, x = ~Hours, y = ~Scores, type = 'bar', mode = 'markers',marker = list(color = "DARKGREEN", opacity = 0.5), size = 4) %>%  
+  layout(title = 'Scores according to hours', 
+                       yaxis = list(title = 'Scores'), 
+                       xaxis = list(title = 'Hours of study') )
+
+
+
+```
+
+
+# Modelling
+* Simple Linear Regression
+```{r , warning=FALSE, message=FALSE}
+
+
+model <- lm( Scores~  Hours,  data=train) #model building
+model
+```
+* Summary of model
+```{r , warning=FALSE, message=FALSE}
+summary(model) 
+
+#plot
+plot(Scores~  Hours,  train, pch =4, frame = FALSE, col  = "red")
+abline(model, col = "blue")
+```
+
+
+# Model Prediction
+```{r , warning=FALSE, message=FALSE}
+# Prediction
+cof <- coef(summary(model))
+cof
+
+pred  <- predict(model,train)
+pred
+
+train_pred <- data.frame(train,pred)
+train_pred
+
+```
+
+
+## Comparing actual values with Predicted values
+```{r , warning=FALSE, message=FALSE}
+Scores_comp <- data.frame(Actual  = train$Scores, Predcited = train_pred$pred)
+Scores_comp
+```
+
+
+### Actual vs Predicted Graph
+```{r , warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+Actual <- c(Scores_comp$Actual)
+Predcited <- c(Scores_comp$Predcited)
+plot(Actual, type = "b", frame = FALSE, pch = 10, 
+     col = "#4AC6B7", xlab = "x", ylab = "y")
+
+lines(Predcited, pch = 10, col = "#C61951", type = "b", lty = 2)
+
+legend("topleft", legend=c("Actual", "Predicted"), col=c("#4AC6B7", "#C61951"), 
+       pch = 10, lty = 1:1, cex=0.6)
+```
+
+# Model Diagnostics
+```{r , warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+
+par(mfrow=c(2,2))
+
+plot(model)
+
+
+```
+## Test data Evoluation
+```{r , warning=FALSE, message=FALSE}
+
+pred  <- predict(model,test)
+tibble(pred)
+
+test_pred <- data.frame(test,pred)
+test_pred
+
+```
+### Actual vs Predicted graph
+
+```{r , warning=FALSE, message=FALSE}
+Scores_comp2 <- data.frame(Actual  = test$Scores, Predcited = test_pred$pred)
+Scores_comp2
+```
+# The predicted score if a student studies for 9.25 hrs/ day  
+* Predicting score if a student studies for 9.25 hrs/day
+```{r , warning=FALSE, message=FALSE}
+pred_hour  <-  predict(model, data.frame(Hours=9.25)) 
+pred_hour
+
+#(or)
+coef(model)[1] + 9.25*coef(model)[2] #Mathematical form
+```
+
+```{r , include = FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+train_pred_new <-  train_pred %>% add_row(Hours=9.25, Scores= pred_hour,
+                                          pred =pred_hour)
+train_pred_new
+```
+
+
+```{r , warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+library(highcharter)
+
+hc <- train_pred_new %>% group_by(Scores, Hours) %>%
+  hchart('column', hcaes(x = 'Hours', y = 'Scores') ) 
+
+hc
+```
